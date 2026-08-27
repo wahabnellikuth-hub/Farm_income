@@ -1,17 +1,38 @@
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { mockCrops } from '../data/mockData';
+import { Loader2 } from 'lucide-react';
+import type { Crop } from '../data/mockData';
+import { getCrops } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 
 export default function Analytics() {
-  const chartData = mockCrops.map(crop => ({
+  const { user } = useAuth();
+  const [crops, setCrops] = useState<Crop[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      getCrops(user.uid).then(data => {
+        setCrops(data);
+        setLoading(false);
+      });
+    }
+  }, [user]);
+
+  if (loading) {
+    return <div className="p-8 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-farm-green-600" /></div>;
+  }
+
+  const chartData = crops.map(crop => ({
     name: crop.name,
-    Income: crop.totalIncome,
-    Expenses: crop.totalExpenses,
-    Profit: crop.totalIncome - crop.totalExpenses,
+    Income: crop.totalIncome || 0,
+    Expenses: crop.totalExpenses || 0,
+    Profit: (crop.totalIncome || 0) - (crop.totalExpenses || 0),
   }));
 
-  const pieData = mockCrops.map(crop => ({
+  const pieData = crops.map(crop => ({
     name: crop.name,
-    value: crop.totalIncome,
+    value: crop.totalIncome || 0,
   }));
 
   const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6'];
@@ -33,7 +54,7 @@ export default function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `₹${value / 1000}k`} />
-                <RechartsTooltip cursor={{ fill: '#f9fafb' }} formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                <RechartsTooltip cursor={{ fill: '#f9fafb' }} formatter={(value: any) => `₹${Number(value).toLocaleString()}`} />
                 <Legend />
                 <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
@@ -57,11 +78,11 @@ export default function Analytics() {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {pieData.map((entry, index) => (
+                  {pieData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <RechartsTooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                <RechartsTooltip formatter={(value: any) => `₹${Number(value).toLocaleString()}`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

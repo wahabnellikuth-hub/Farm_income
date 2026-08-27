@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockCrops, mockTransactions } from '../data/mockData';
+import type { Crop, Transaction } from '../data/mockData';
+import { getCrops, getTransactions } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 import { 
   PlusCircle, 
   MinusCircle, 
@@ -10,19 +12,40 @@ import {
   ArrowLeft,
   Search,
   Filter,
-  MoreVertical,
   Edit,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
 import { cn } from '../components/Layout';
 
 export default function CropManagement() {
   const { id } = useParams();
-  const crop = mockCrops.find(c => c.id === id);
-  const transactions = mockTransactions.filter(t => t.cropId === id);
+  const { user } = useAuth();
+  
+  const [crop, setCrop] = useState<Crop | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
+
+  useEffect(() => {
+    if (user && id) {
+      Promise.all([
+        getCrops(user.uid),
+        getTransactions(user.uid)
+      ]).then(([allCrops, allTransactions]) => {
+        const foundCrop = allCrops.find(c => c.id === id);
+        setCrop(foundCrop || null);
+        setTransactions(allTransactions.filter(t => t.cropId === id));
+        setLoading(false);
+      });
+    }
+  }, [user, id]);
+
+  if (loading) {
+    return <div className="p-8 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-farm-green-600" /></div>;
+  }
 
   if (!crop) {
     return <div className="p-6 text-center text-gray-500">Crop not found</div>;

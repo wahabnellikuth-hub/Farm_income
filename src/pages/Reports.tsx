@@ -1,14 +1,34 @@
-import { mockCrops } from '../data/mockData';
-import { Download, FileText, Printer, FileSpreadsheet } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, FileSpreadsheet, Printer, Loader2 } from 'lucide-react';
+import type { Crop } from '../data/mockData';
+import { getCrops } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/Layout';
 
 export default function Reports() {
+  const { user } = useAuth();
+  const [crops, setCrops] = useState<Crop[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      getCrops(user.uid).then((c) => {
+        setCrops(c);
+        setLoading(false);
+      });
+    }
+  }, [user]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
 
-  const totalIncome = mockCrops.reduce((acc, crop) => acc + crop.totalIncome, 0);
-  const totalExpenses = mockCrops.reduce((acc, crop) => acc + crop.totalExpenses, 0);
+  if (loading) {
+    return <div className="p-8 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-farm-green-600" /></div>;
+  }
+
+  const totalIncome = crops.reduce((acc, crop) => acc + crop.totalIncome, 0);
+  const totalExpenses = crops.reduce((acc, crop) => acc + crop.totalExpenses, 0);
   const totalProfit = totalIncome - totalExpenses;
 
   return (
@@ -63,34 +83,42 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {mockCrops.map((crop) => {
-                const profit = crop.totalIncome - crop.totalExpenses;
-                const margin = crop.totalIncome > 0 ? (profit / crop.totalIncome) * 100 : 0;
-                
-                return (
-                  <tr key={crop.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center gap-2">
-                      <span>{crop.icon}</span> {crop.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-green-600">{formatCurrency(crop.totalIncome)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-red-600">{formatCurrency(crop.totalExpenses)}</td>
-                    <td className={cn(
-                      "px-6 py-4 whitespace-nowrap text-right font-bold",
-                      profit >= 0 ? "text-green-600" : "text-red-600"
-                    )}>
-                      {formatCurrency(profit)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium",
-                        margin > 50 ? "bg-green-100 text-green-700" : margin > 20 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+              {crops.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    No crops data available.
+                  </td>
+                </tr>
+              ) : (
+                crops.map((crop) => {
+                  const profit = (crop.totalIncome || 0) - (crop.totalExpenses || 0);
+                  const margin = crop.totalIncome ? (profit / crop.totalIncome) * 100 : 0;
+                  
+                  return (
+                    <tr key={crop.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center gap-2">
+                        <span>{crop.icon}</span> {crop.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-green-600">{formatCurrency(crop.totalIncome || 0)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-red-600">{formatCurrency(crop.totalExpenses || 0)}</td>
+                      <td className={cn(
+                        "px-6 py-4 whitespace-nowrap text-right font-bold",
+                        profit >= 0 ? "text-green-600" : "text-red-600"
                       )}>
-                        {margin.toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+                        {formatCurrency(Math.abs(profit))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-full text-xs font-medium",
+                          margin > 50 ? "bg-green-100 text-green-700" : margin > 20 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+                        )}>
+                          {margin.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

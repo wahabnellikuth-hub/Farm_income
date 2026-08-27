@@ -1,4 +1,5 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Sprout, FileBarChart, PieChart, CalendarDays, Settings, LogOut } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -16,6 +17,18 @@ const navigation = [
 ];
 
 export default function Layout() {
+  const { logOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await logOut();
+      navigate('/login');
+    } catch (error) {
+      console.error("Failed to log out", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row pb-16 lg:pb-0">
       {/* Desktop Sidebar */}
@@ -58,7 +71,7 @@ export default function Layout() {
         </div>
 
         <div className="flex flex-shrink-0 border-t border-gray-200 p-4">
-          <button className="flex items-center w-full px-2 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors">
+          <button onClick={handleSignOut} className="flex items-center w-full px-2 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors">
             <LogOut className="mr-3 h-5 w-5" />
             Sign Out
           </button>

@@ -1,10 +1,24 @@
-import { useState } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { mockTransactions } from '../data/mockData';
+import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import type { Transaction } from '../data/mockData';
+import { getTransactions } from '../lib/db';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/Layout';
 
 export default function CalendarView() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); // August 2026 for mock data
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); // August 2026 for mock data alignment
+
+  useEffect(() => {
+    if (user) {
+      getTransactions(user.uid).then(t => {
+        setTransactions(t);
+        setLoading(false);
+      });
+    }
+  }, [user]);
 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -17,10 +31,14 @@ export default function CalendarView() {
 
   const getTransactionsForDay = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return mockTransactions.filter(t => t.date === dateStr);
+    return transactions.filter(t => t.date === dateStr);
   };
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  if (loading) {
+    return <div className="p-8 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-farm-green-600" /></div>;
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
