@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, setDoc, query, where, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { ref, get, set, push, update, remove, child } from 'firebase/database';
 import { db } from './firebase';
 import { mockCrops, mockTransactions } from '../data/mockData';
 import type { Crop, Transaction } from '../data/mockData';
@@ -8,62 +8,73 @@ const TRANSACTIONS_COLLECTION = 'transactions';
 
 // Crops
 export async function getCrops(userId: string): Promise<Crop[]> {
-  const q = query(collection(db, CROPS_COLLECTION), where("userId", "==", userId));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Crop));
+  const dbRef = ref(db);
+  const snapshot = await get(child(dbRef, `${CROPS_COLLECTION}`));
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+    const crops = Object.keys(data).map(key => ({ id: key, ...data[key] } as Crop & { userId: string }));
+    return crops.filter(c => c.userId === userId);
+  }
+  return [];
 }
 
 export async function addCrop(userId: string, crop: Omit<Crop, 'id'>) {
-  const docRef = doc(collection(db, CROPS_COLLECTION));
-  await setDoc(docRef, { ...crop, userId, id: docRef.id });
-  return docRef.id;
+  const cropListRef = ref(db, CROPS_COLLECTION);
+  const newCropRef = push(cropListRef);
+  await set(newCropRef, { ...crop, userId });
+  return newCropRef.key as string;
 }
 
 export async function updateCropTarget(cropId: string, targetIncome: number) {
-  const docRef = doc(db, CROPS_COLLECTION, cropId);
-  await updateDoc(docRef, { targetIncome });
+  const cropRef = ref(db, `${CROPS_COLLECTION}/${cropId}`);
+  await update(cropRef, { targetIncome });
 }
 
 // Transactions
 export async function getTransactions(userId: string): Promise<Transaction[]> {
-  const q = query(collection(db, TRANSACTIONS_COLLECTION), where("userId", "==", userId), orderBy("date", "desc"));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+  const dbRef = ref(db);
+  const snapshot = await get(child(dbRef, `${TRANSACTIONS_COLLECTION}`));
+  if (snapshot.exists()) {
+    const data = snapshot.val();
+    let txs = Object.keys(data).map(key => ({ id: key, ...data[key] } as Transaction & { userId: string }));
+    txs = txs.filter(t => t.userId === userId);
+    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+  return [];
 }
 
 export async function addTransaction(userId: string, transaction: Omit<Transaction, 'id'>) {
-  const docRef = doc(collection(db, TRANSACTIONS_COLLECTION));
-  
-  // Create transaction
-  await setDoc(docRef, { ...transaction, userId, id: docRef.id });
+  const txListRef = ref(db, TRANSACTIONS_COLLECTION);
+  const newTxRef = push(txListRef);
+  await set(newTxRef, { ...transaction, userId });
   
   // Update crop totals
-  const cropRef = doc(db, CROPS_COLLECTION, transaction.cropId);
-  const cropSnap = await getDocs(query(collection(db, CROPS_COLLECTION), where("id", "==", transaction.cropId)));
-  if (!cropSnap.empty) {
-    const cropData = cropSnap.docs[0].data() as Crop;
+  const cropRef = ref(db, `${CROPS_COLLECTION}/${transaction.cropId}`);
+  const cropSnap = await get(cropRef);
+  if (cropSnap.exists()) {
+    const cropData = cropSnap.val() as Crop;
     if (transaction.type === 'Income') {
-      await updateDoc(cropRef, { totalIncome: cropData.totalIncome + transaction.amount });
+      await update(cropRef, { totalIncome: (cropData.totalIncome || 0) + transaction.amount });
     } else {
-      await updateDoc(cropRef, { totalExpenses: cropData.totalExpenses + transaction.amount });
+      await update(cropRef, { totalExpenses: (cropData.totalExpenses || 0) + transaction.amount });
     }
   }
 
-  return docRef.id;
+  return newTxRef.key as string;
 }
 
 export async function deleteTransaction(transaction: Transaction) {
-  await deleteDoc(doc(db, TRANSACTIONS_COLLECTION, transaction.id));
+  await remove(ref(db, `${TRANSACTIONS_COLLECTION}/${transaction.id}`));
 
   // Reverse crop totals
-  const cropRef = doc(db, CROPS_COLLECTION, transaction.cropId);
-  const cropSnap = await getDocs(query(collection(db, CROPS_COLLECTION), where("id", "==", transaction.cropId)));
-  if (!cropSnap.empty) {
-    const cropData = cropSnap.docs[0].data() as Crop;
+  const cropRef = ref(db, `${CROPS_COLLECTION}/${transaction.cropId}`);
+  const cropSnap = await get(cropRef);
+  if (cropSnap.exists()) {
+    const cropData = cropSnap.val() as Crop;
     if (transaction.type === 'Income') {
-      await updateDoc(cropRef, { totalIncome: cropData.totalIncome - transaction.amount });
+      await update(cropRef, { totalIncome: (cropData.totalIncome || 0) - transaction.amount });
     } else {
-      await updateDoc(cropRef, { totalExpenses: cropData.totalExpenses - transaction.amount });
+      await update(cropRef, { totalExpenses: (cropData.totalExpenses || 0) - transaction.amount });
     }
   }
 }
@@ -71,12 +82,18 @@ export async function deleteTransaction(transaction: Transaction) {
 // Seeder
 export async function seedDatabase(userId: string) {
   // Add mock crops
+  const cropsRef = ref(db, CROPS_COLLECTION);
   for (const crop of mockCrops) {
-    await setDoc(doc(db, CROPS_COLLECTION, crop.id), { ...crop, userId });
+    const cropData = { ...crop, userId };
+    delete (cropData as any).id; // We use the ID as the key
+    await set(child(cropsRef, crop.id), cropData);
   }
 
   // Add mock transactions
+  const txsRef = ref(db, TRANSACTIONS_COLLECTION);
   for (const tx of mockTransactions) {
-    await setDoc(doc(db, TRANSACTIONS_COLLECTION, tx.id), { ...tx, userId });
+    const txData = { ...tx, userId };
+    delete (txData as any).id; // We use the ID as the key
+    await set(child(txsRef, tx.id), txData);
   }
 }

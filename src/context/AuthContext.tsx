@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
@@ -14,8 +14,8 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Hardcode a guest user so the app works without login
-  const [user, setUser] = useState<User | null>({ uid: 'guest_user', email: 'guest@farm.com' } as User);
-  const [loading, setLoading] = useState(false);
+  const [user] = useState<User | null>({ uid: 'guest_user', email: 'guest@farm.com' } as User);
+  const [loading] = useState(false);
 
   useEffect(() => {
     // Disabled real Firebase Auth to allow access without login

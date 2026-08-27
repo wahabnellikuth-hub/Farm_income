@@ -1,6 +1,5 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import CropManagement from './pages/CropManagement';
@@ -8,7 +7,6 @@ import Reports from './pages/Reports';
 import Analytics from './pages/Analytics';
 import CalendarView from './pages/CalendarView';
 import Settings from './pages/Settings';
-import Login from './pages/Login';
 
 
 
