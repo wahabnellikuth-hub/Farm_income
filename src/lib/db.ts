@@ -97,3 +97,30 @@ export async function seedDatabase(userId: string) {
     await set(child(txsRef, tx.id), txData);
   }
 }
+
+// Clear all data
+export async function clearDatabase(userId: string) {
+  const dbRef = ref(db);
+  
+  // Clear Crops
+  const cropsSnapshot = await get(child(dbRef, CROPS_COLLECTION));
+  if (cropsSnapshot.exists()) {
+    const cropsData = cropsSnapshot.val();
+    for (const key of Object.keys(cropsData)) {
+      if (cropsData[key].userId === userId) {
+        await remove(ref(db, `${CROPS_COLLECTION}/${key}`));
+      }
+    }
+  }
+
+  // Clear Transactions
+  const txSnapshot = await get(child(dbRef, TRANSACTIONS_COLLECTION));
+  if (txSnapshot.exists()) {
+    const txData = txSnapshot.val();
+    for (const key of Object.keys(txData)) {
+      if (txData[key].userId === userId) {
+        await remove(ref(db, `${TRANSACTIONS_COLLECTION}/${key}`));
+      }
+    }
+  }
+}

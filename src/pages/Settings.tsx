@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Save, User, MapPin, Globe, Database, Loader2 } from 'lucide-react';
+import { Save, User, MapPin, Globe, Database, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { seedDatabase } from '../lib/db';
+import { seedDatabase, clearDatabase } from '../lib/db';
 
 export default function Settings() {
   const { user } = useAuth();
   const [seeding, setSeeding] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [seedSuccess, setSeedSuccess] = useState('');
 
   const handleSeed = async () => {
@@ -19,6 +20,21 @@ export default function Settings() {
       setSeedSuccess('Failed to seed: ' + error.message);
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleClear = async () => {
+    if (!user) return;
+    if (!window.confirm("Are you sure you want to completely wipe all your data? This action cannot be undone.")) return;
+    try {
+      setClearing(true);
+      setSeedSuccess('');
+      await clearDatabase(user.uid);
+      setSeedSuccess('Database completely wiped and clean.');
+    } catch (error: any) {
+      setSeedSuccess('Failed to clear data: ' + error.message);
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -97,14 +113,22 @@ export default function Settings() {
             </button>
             <button 
               onClick={handleSeed}
-              disabled={seeding}
+              disabled={seeding || clearing}
               className="px-4 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg font-medium hover:bg-yellow-100 transition disabled:opacity-50 flex items-center"
             >
               {seeding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Seed Mock Data (Firebase)
             </button>
+            <button 
+              onClick={handleClear}
+              disabled={seeding || clearing}
+              className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg font-medium hover:bg-red-100 transition disabled:opacity-50 flex items-center"
+            >
+              {clearing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Clear All Data
+            </button>
           </div>
-          {seedSuccess && <p className="text-sm font-medium text-green-600">{seedSuccess}</p>}
+          {seedSuccess && <p className={seedSuccess.includes('Failed') ? "text-sm font-medium text-red-600" : "text-sm font-medium text-green-600"}>{seedSuccess}</p>}
         </div>
       </div>
 
