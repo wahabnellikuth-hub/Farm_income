@@ -10,22 +10,14 @@ import CalendarView from './pages/CalendarView';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-}
+
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="crop/:id" element={<CropManagement />} />
             <Route path="reports" element={<Reports />} />
@@ -33,6 +25,8 @@ function App() {
             <Route path="calendar" element={<CalendarView />} />
             <Route path="settings" element={<Settings />} />
           </Route>
+          {/* Catch all redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

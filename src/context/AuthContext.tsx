@@ -13,16 +13,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Hardcode a guest user so the app works without login
+  const [user, setUser] = useState<User | null>({ uid: 'guest_user', email: 'guest@farm.com' } as User);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // Disabled real Firebase Auth to allow access without login
+    // const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    //   setUser(currentUser);
+    //   setLoading(false);
+    // });
+    // return () => unsubscribe();
   }, []);
 
   const signIn = async (email: string, pass: string) => {
