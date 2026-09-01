@@ -1,21 +1,22 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import type { TransactionType } from '../../types';
+import type { Transaction, TransactionType } from '../../types';
 
 interface AddTransactionFormProps {
   type: TransactionType;
+  initialData?: Transaction;
   onSubmit: (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; rate?: number; }) => Promise<void>;
 }
 
-export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [rate, setRate] = useState('');
-  const [grade, setGrade] = useState('');
-  const [category, setCategory] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
+export function AddTransactionForm({ type, initialData, onSubmit }: AddTransactionFormProps) {
+  const [date, setDate] = useState(initialData ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+  const [amount, setAmount] = useState(initialData ? initialData.amount.toString() : '');
+  const [description, setDescription] = useState(initialData ? initialData.description : '');
+  const [quantity, setQuantity] = useState(initialData?.quantity ? initialData.quantity.toString() : '');
+  const [rate, setRate] = useState(initialData?.rate ? initialData.rate.toString() : '');
+  const [grade, setGrade] = useState(initialData?.grade || '');
+  const [category, setCategory] = useState(initialData ? initialData.category : '');
+  const [paymentMethod, setPaymentMethod] = useState(initialData ? initialData.paymentMethod : 'Cash');
   const [loading, setLoading] = useState(false);
 
   const categories = type === 'Income' 
@@ -92,7 +93,7 @@ export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) 
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Item</label>
         <input 
           type="text" 
           required

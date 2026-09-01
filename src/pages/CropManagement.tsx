@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import type { Crop, Transaction, TransactionType } from '../types';
-import { getCrops, getTransactions, addTransaction } from '../lib/db';
+import { getCrops, getTransactions, addTransaction, deleteTransaction, updateCropTarget, updateTransaction } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
@@ -31,19 +31,31 @@ export default function CropManagement() {
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
   const [txModalType, setTxModalType] = useState<TransactionType>('Income');
 
+  const [txToEdit, setTxToEdit] = useState<Transaction | null>(null);
+
   const openTxModal = (type: TransactionType) => {
     setTxModalType(type);
     setIsAddTxModalOpen(true);
   };
 
-  const handleAddTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; rate?: number; }) => {
+  const handleSaveTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; rate?: number; }) => {
     if (!user || !crop) return;
-    await addTransaction(user.uid, {
-      ...data,
-      cropId: crop.id,
-      type: txModalType
-    });
-    setIsAddTxModalOpen(false);
+    
+    if (txToEdit) {
+      await updateTransaction(txToEdit.id, txToEdit, {
+        ...data,
+        cropId: crop.id,
+        type: txToEdit.type
+      });
+      setTxToEdit(null);
+    } else {
+      await addTransaction(user.uid, {
+        ...data,
+        cropId: crop.id,
+        type: txModalType
+      });
+      setIsAddTxModalOpen(false);
+    }
     
     // Refresh data
     const [allCrops, allTransactions] = await Promise.all([
@@ -53,6 +65,41 @@ export default function CropManagement() {
     const foundCrop = allCrops.find(c => c.id === id);
     setCrop(foundCrop || null);
     setTransactions(allTransactions.filter(t => t.cropId === id));
+  };
+
+  const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
+
+  const handleDeleteTransaction = async (tx: Transaction) => {
+    if (!user || !crop) return;
+    setLoading(true);
+    await deleteTransaction(tx);
+    
+    // Refresh data
+    const [allCrops, allTransactions] = await Promise.all([
+      getCrops(user.uid),
+      getTransactions(user.uid)
+    ]);
+    const foundCrop = allCrops.find(c => c.id === id);
+    setCrop(foundCrop || null);
+    setTransactions(allTransactions.filter(t => t.cropId === id));
+    setTxToDelete(null);
+    setLoading(false);
+  };
+
+  const [isEditTargetModalOpen, setIsEditTargetModalOpen] = useState(false);
+  const [newTarget, setNewTarget] = useState('');
+
+  const handleEditTarget = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !crop || !newTarget) return;
+    setLoading(true);
+    await updateCropTarget(crop.id, Number(newTarget));
+    setIsEditTargetModalOpen(false);
+    
+    const allCrops = await getCrops(user.uid);
+    const foundCrop = allCrops.find(c => c.id === id);
+    setCrop(foundCrop || null);
+    setLoading(false);
   };
 
   const [search, setSearch] = useState('');
@@ -139,7 +186,7 @@ export default function CropManagement() {
             </h2>
             <p className="text-3xl sm:text-4xl font-bold mt-2">{formatCurrency(crop.targetIncome)}</p>
           </div>
-          <button className="text-sm px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-sm transition">
+          <button onClick={() => { setNewTarget(crop.targetIncome.toString()); setIsEditTargetModalOpen(true); }} className="text-sm px-3 py-1 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-sm transition">
             Edit Target
           </button>
         </div>
@@ -204,7 +251,7 @@ export default function CropManagement() {
               <tr>
                 <th className="px-6 py-4 font-medium">Date</th>
                 <th className="px-6 py-4 font-medium">Type</th>
-                <th className="px-6 py-4 font-medium">Description</th>
+                <th className="px-6 py-4 font-medium">Item</th>
                 <th className="px-6 py-4 font-medium">Details</th>
                 <th className="px-6 py-4 font-medium">Category</th>
                 <th className="px-6 py-4 font-medium text-right">Amount</th>
@@ -244,8 +291,8 @@ export default function CropManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button className="p-1 text-gray-400 hover:text-blue-600 transition"><Edit className="w-4 h-4" /></button>
-                        <button className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => setTxToEdit(tx)} className="p-1 text-gray-400 hover:text-blue-600 transition"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => setTxToDelete(tx)} className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>
@@ -288,8 +335,8 @@ export default function CropManagement() {
                       {tx.type}
                     </span>
                     <div className="flex gap-2">
-                      <button className="p-1 text-gray-400 hover:text-blue-600 transition"><Edit className="w-4 h-4" /></button>
-                      <button className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => setTxToEdit(tx)} className="p-1 text-gray-400 hover:text-blue-600 transition"><Edit className="w-4 h-4" /></button>
+                      <button onClick={() => setTxToDelete(tx)} className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </div>
                 </div>
@@ -319,7 +366,64 @@ export default function CropManagement() {
         onClose={() => setIsAddTxModalOpen(false)}
         title={`Add ${txModalType}`}
       >
-        <AddTransactionForm type={txModalType} onSubmit={handleAddTransaction} />
+        <AddTransactionForm type={txModalType} onSubmit={handleSaveTransaction} />
+      </Modal>
+
+      <Modal 
+        isOpen={!!txToEdit} 
+        onClose={() => setTxToEdit(null)}
+        title={`Edit ${txToEdit?.type}`}
+      >
+        {txToEdit && (
+          <AddTransactionForm 
+            type={txToEdit.type} 
+            initialData={txToEdit} 
+            onSubmit={handleSaveTransaction} 
+          />
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!txToDelete}
+        onClose={() => setTxToDelete(null)}
+        title="Delete Transaction"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">Are you sure you want to delete this {txToDelete?.type.toLowerCase()} of {txToDelete ? formatCurrency(txToDelete.amount) : ''}? This action cannot be undone.</p>
+          <div className="flex gap-3 justify-end pt-2">
+            <button onClick={() => setTxToDelete(null)} className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition">Cancel</button>
+            <button onClick={() => txToDelete && handleDeleteTransaction(txToDelete)} className="px-4 py-2 bg-red-600 text-white font-medium hover:bg-red-700 rounded-lg transition flex items-center">
+              Delete
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isEditTargetModalOpen}
+        onClose={() => setIsEditTargetModalOpen(false)}
+        title="Edit Target Income"
+      >
+        <form onSubmit={handleEditTarget} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₹</span>
+              <input 
+                type="number" 
+                required
+                min="0"
+                step="1000"
+                value={newTarget}
+                onChange={(e) => setNewTarget(e.target.value)}
+                className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none"
+              />
+            </div>
+          </div>
+          <button type="submit" className="w-full py-3 bg-farm-green-600 text-white rounded-lg font-medium hover:bg-farm-green-700 transition">
+            Save Target
+          </button>
+        </form>
       </Modal>
     </div>
   );

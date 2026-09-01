@@ -78,6 +78,36 @@ export async function deleteTransaction(transaction: Transaction) {
   }
 }
 
+export async function updateTransaction(transactionId: string, oldTx: Transaction, newTxData: Omit<Transaction, 'id' | 'userId' | 'cropId'>) {
+  const txRef = ref(db, `${TRANSACTIONS_COLLECTION}/${transactionId}`);
+  await update(txRef, newTxData);
+
+  // Update crop totals
+  const cropRef = ref(db, `${CROPS_COLLECTION}/${oldTx.cropId}`);
+  const cropSnap = await get(cropRef);
+  if (cropSnap.exists()) {
+    const cropData = cropSnap.val() as Crop;
+    let newTotalIncome = cropData.totalIncome || 0;
+    let newTotalExpenses = cropData.totalExpenses || 0;
+
+    // Reverse old
+    if (oldTx.type === 'Income') {
+      newTotalIncome -= oldTx.amount;
+    } else {
+      newTotalExpenses -= oldTx.amount;
+    }
+
+    // Apply new
+    if (newTxData.type === 'Income') {
+      newTotalIncome += newTxData.amount;
+    } else {
+      newTotalExpenses += newTxData.amount;
+    }
+
+    await update(cropRef, { totalIncome: newTotalIncome, totalExpenses: newTotalExpenses });
+  }
+}
+
 // Clear all data
 export async function clearDatabase(userId: string) {
   const dbRef = ref(db);
