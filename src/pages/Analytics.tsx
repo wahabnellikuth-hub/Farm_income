@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import type { Crop } from '../types';
@@ -7,17 +8,23 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Analytics() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const cropId = searchParams.get('cropId');
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       getCrops(user.uid).then(data => {
-        setCrops(data);
+        if (cropId) {
+          setCrops(data.filter(crop => crop.id === cropId));
+        } else {
+          setCrops(data);
+        }
         setLoading(false);
       });
     }
-  }, [user]);
+  }, [user, cropId]);
 
   if (loading) {
     return <div className="p-8 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-farm-green-600" /></div>;

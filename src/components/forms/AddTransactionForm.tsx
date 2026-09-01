@@ -9,19 +9,19 @@ interface AddTransactionFormProps {
 }
 
 export function AddTransactionForm({ type, initialData, onSubmit }: AddTransactionFormProps) {
+  const categories = type === 'Income' 
+    ? ['Sales', 'Subsidies', 'Other Income']
+    : ['Labour', 'Fertilizer', 'Seeds', 'Pesticides', 'Fuel', 'Machinery', 'Transport', 'Other Expense'];
+
   const [date, setDate] = useState(initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState(initialData?.amount ? initialData.amount.toString() : '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [quantity, setQuantity] = useState(initialData?.quantity ? initialData.quantity.toString() : '');
   const [rate, setRate] = useState(initialData?.rate ? initialData.rate.toString() : '');
   const [grade, setGrade] = useState(initialData?.grade || '');
-  const [category, setCategory] = useState(initialData?.category || '');
+  const [category, setCategory] = useState(initialData?.category || categories[0]);
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Cash');
   const [loading, setLoading] = useState(false);
-
-  const categories = type === 'Income' 
-    ? ['Sales', 'Subsidies', 'Other Income']
-    : ['Labour', 'Fertilizer', 'Seeds', 'Pesticides', 'Fuel', 'Machinery', 'Transport', 'Other Expense'];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +142,6 @@ export function AddTransactionForm({ type, initialData, onSubmit }: AddTransacti
             onChange={(e) => setCategory(e.target.value)}
             className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none bg-white appearance-none"
           >
-            <option value="" disabled>Select...</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>

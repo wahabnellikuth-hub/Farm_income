@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FileText, FileSpreadsheet, Printer, Loader2 } from 'lucide-react';
 import type { Crop } from '../types';
 import { getCrops } from '../lib/db';
@@ -10,17 +11,23 @@ import * as XLSX from 'xlsx';
 
 export default function Reports() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const cropId = searchParams.get('cropId');
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       getCrops(user.uid).then((c) => {
-        setCrops(c);
+        if (cropId) {
+          setCrops(c.filter(crop => crop.id === cropId));
+        } else {
+          setCrops(c);
+        }
         setLoading(false);
       });
     }
-  }, [user]);
+  }, [user, cropId]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
