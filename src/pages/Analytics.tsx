@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Loader2 } from 'lucide-react';
-import type { Crop } from '../data/mockData';
+import type { Crop } from '../types';
 import { getCrops } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 
@@ -38,7 +38,7 @@ export default function Analytics() {
   const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6'];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-farm-green-900">Farm Analytics</h1>
         <p className="text-gray-500">Visualize your financial performance.</p>

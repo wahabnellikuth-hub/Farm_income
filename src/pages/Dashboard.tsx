@@ -1,15 +1,33 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Wallet, IndianRupee, Plus, Activity, Loader2 } from 'lucide-react';
-import type { Crop } from '../data/mockData';
-import { getCrops } from '../lib/db';
+import type { Crop } from '../types';
+import { getCrops, addCrop } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/Layout';
+import { Modal } from '../components/Modal';
+import { AddCropForm } from '../components/forms/AddCropForm';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAddCropModalOpen, setIsAddCropModalOpen] = useState(false);
+
+  const handleAddCrop = async (data: { name: string; targetIncome: number; icon: string }) => {
+    if (!user) return;
+    await addCrop(user.uid, {
+      ...data,
+      totalIncome: 0,
+      totalExpenses: 0,
+      lastUpdated: new Date().toISOString()
+    });
+    setIsAddCropModalOpen(false);
+    
+    // Refresh crops
+    const updatedCrops = await getCrops(user.uid);
+    setCrops(updatedCrops);
+  };
 
   useEffect(() => {
     if (user) {
@@ -35,7 +53,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 pb-24 lg:pb-8">
       <div>
         <h1 className="text-2xl font-bold text-farm-green-900">Farm Overview</h1>
         <p className="text-gray-500">Track your agricultural financial performance.</p>
@@ -88,7 +106,10 @@ export default function Dashboard() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Your Crops</h2>
-          <button className="flex items-center text-sm font-medium text-farm-green-600 hover:text-farm-green-700 bg-farm-green-50 px-3 py-1.5 rounded-lg transition-colors">
+          <button 
+            onClick={() => setIsAddCropModalOpen(true)}
+            className="hidden sm:flex items-center text-sm font-medium text-farm-green-600 hover:text-farm-green-700 bg-farm-green-50 px-3 py-1.5 rounded-lg transition-colors"
+          >
             <Plus className="h-4 w-4 mr-1" />
             Add Crop
           </button>
@@ -158,6 +179,21 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      <button
+        onClick={() => setIsAddCropModalOpen(true)}
+        className="sm:hidden fixed bottom-20 right-4 p-4 bg-farm-green-600 text-white rounded-full shadow-xl hover:bg-farm-green-700 transition z-40 active:scale-95"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      <Modal 
+        isOpen={isAddCropModalOpen} 
+        onClose={() => setIsAddCropModalOpen(false)}
+        title="Add New Crop"
+      >
+        <AddCropForm onSubmit={handleAddCrop} />
+      </Modal>
     </div>
   );
 }

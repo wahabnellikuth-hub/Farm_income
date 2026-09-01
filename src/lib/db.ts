@@ -1,7 +1,6 @@
 import { ref, get, set, push, update, remove, child } from 'firebase/database';
 import { db } from './firebase';
-import { mockCrops, mockTransactions } from '../data/mockData';
-import type { Crop, Transaction } from '../data/mockData';
+import type { Crop, Transaction } from '../types';
 
 const CROPS_COLLECTION = 'crops';
 const TRANSACTIONS_COLLECTION = 'transactions';
@@ -76,25 +75,6 @@ export async function deleteTransaction(transaction: Transaction) {
     } else {
       await update(cropRef, { totalExpenses: (cropData.totalExpenses || 0) - transaction.amount });
     }
-  }
-}
-
-// Seeder
-export async function seedDatabase(userId: string) {
-  // Add mock crops
-  const cropsRef = ref(db, CROPS_COLLECTION);
-  for (const crop of mockCrops) {
-    const cropData = { ...crop, userId };
-    delete (cropData as any).id; // We use the ID as the key
-    await set(child(cropsRef, crop.id), cropData);
-  }
-
-  // Add mock transactions
-  const txsRef = ref(db, TRANSACTIONS_COLLECTION);
-  for (const tx of mockTransactions) {
-    const txData = { ...tx, userId };
-    delete (txData as any).id; // We use the ID as the key
-    await set(child(txsRef, tx.id), txData);
   }
 }
 

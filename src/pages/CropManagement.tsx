@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import type { Crop, Transaction } from '../data/mockData';
-import { getCrops, getTransactions } from '../lib/db';
+import type { Crop, Transaction, TransactionType } from '../types';
+import { getCrops, getTransactions, addTransaction } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
+import { Modal } from '../components/Modal';
+import { AddTransactionForm } from '../components/forms/AddTransactionForm';
 import { 
   PlusCircle, 
   MinusCircle, 
@@ -25,6 +27,33 @@ export default function CropManagement() {
   const [crop, setCrop] = useState<Crop | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
+  const [txModalType, setTxModalType] = useState<TransactionType>('Income');
+
+  const openTxModal = (type: TransactionType) => {
+    setTxModalType(type);
+    setIsAddTxModalOpen(true);
+  };
+
+  const handleAddTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string }) => {
+    if (!user || !crop) return;
+    await addTransaction(user.uid, {
+      ...data,
+      cropId: crop.id,
+      type: txModalType
+    });
+    setIsAddTxModalOpen(false);
+    
+    // Refresh data
+    const [allCrops, allTransactions] = await Promise.all([
+      getCrops(user.uid),
+      getTransactions(user.uid)
+    ]);
+    const foundCrop = allCrops.find(c => c.id === id);
+    setCrop(foundCrop || null);
+    setTransactions(allTransactions.filter(t => t.cropId === id));
+  };
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -65,7 +94,7 @@ export default function CropManagement() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -81,10 +110,10 @@ export default function CropManagement() {
         </div>
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 transition w-full sm:w-auto">
+          <button onClick={() => openTxModal('Income')} className="hidden sm:flex items-center justify-center px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg shadow-sm hover:bg-green-700 transition w-full sm:w-auto">
             <PlusCircle className="w-5 h-5 sm:w-4 sm:h-4 mr-2" /> Add Income
           </button>
-          <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 transition w-full sm:w-auto">
+          <button onClick={() => openTxModal('Expense')} className="hidden sm:flex items-center justify-center px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg shadow-sm hover:bg-red-700 transition w-full sm:w-auto">
             <MinusCircle className="w-5 h-5 sm:w-4 sm:h-4 mr-2" /> Add Expense
           </button>
         </div>
@@ -167,8 +196,10 @@ export default function CropManagement() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+        <div className="overflow-hidden">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm text-left">
             <thead className="text-xs text-gray-500 uppercase bg-gray-50/50">
               <tr>
                 <th className="px-6 py-4 font-medium">Date</th>
@@ -217,8 +248,68 @@ export default function CropManagement() {
               )}
             </tbody>
           </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden flex flex-col divide-y divide-gray-100">
+            {filteredTransactions.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No transactions found.</div>
+            ) : (
+              filteredTransactions.map((tx) => (
+                <div key={tx.id} className="p-4 bg-white flex flex-col gap-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium text-gray-900">{tx.description}</h4>
+                      <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString()} • {tx.category}</p>
+                    </div>
+                    <span className={cn(
+                      "font-bold",
+                      tx.type === 'Income' ? "text-green-600" : "text-red-600"
+                    )}>
+                      {tx.type === 'Income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-medium",
+                      tx.type === 'Income' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                    )}>
+                      {tx.type}
+                    </span>
+                    <div className="flex gap-2">
+                      <button className="p-1 text-gray-400 hover:text-blue-600 transition"><Edit className="w-4 h-4" /></button>
+                      <button className="p-1 text-gray-400 hover:text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
+
+      <div className="sm:hidden fixed bottom-20 right-4 flex flex-col gap-3 z-40">
+        <button
+          onClick={() => openTxModal('Expense')}
+          className="p-3 bg-red-600 text-white rounded-full shadow-xl hover:bg-red-700 transition active:scale-95"
+        >
+          <MinusCircle className="h-6 w-6" />
+        </button>
+        <button
+          onClick={() => openTxModal('Income')}
+          className="p-3 bg-green-600 text-white rounded-full shadow-xl hover:bg-green-700 transition active:scale-95"
+        >
+          <PlusCircle className="h-6 w-6" />
+        </button>
+      </div>
+
+      <Modal 
+        isOpen={isAddTxModalOpen} 
+        onClose={() => setIsAddTxModalOpen(false)}
+        title={`Add ${txModalType}`}
+      >
+        <AddTransactionForm type={txModalType} onSubmit={handleAddTransaction} />
+      </Modal>
     </div>
   );
 }

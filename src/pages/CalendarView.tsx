@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import type { Transaction } from '../data/mockData';
+import type { Transaction } from '../types';
 import { getTransactions } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/Layout';
@@ -41,7 +41,7 @@ export default function CalendarView() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-farm-green-900">Farm Calendar</h1>
