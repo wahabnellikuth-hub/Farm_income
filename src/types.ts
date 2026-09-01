@@ -13,6 +13,7 @@ export interface Transaction {
   amount: number;
   paymentMethod: string;
   notes?: string;
+  grade?: string;
 }
 
 export interface Crop {

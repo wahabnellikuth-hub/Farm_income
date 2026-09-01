@@ -4,13 +4,15 @@ import type { TransactionType } from '../../types';
 
 interface AddTransactionFormProps {
   type: TransactionType;
-  onSubmit: (data: { date: string; amount: number; description: string; category: string; paymentMethod: string }) => Promise<void>;
+  onSubmit: (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; }) => Promise<void>;
 }
 
 export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [grade, setGrade] = useState('');
   const [category, setCategory] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,9 @@ export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) 
         amount: Number(amount),
         description,
         category,
-        paymentMethod
+        paymentMethod,
+        quantity: quantity ? Number(quantity) : undefined,
+        grade: grade || undefined
       });
     } finally {
       setLoading(false);
@@ -77,6 +81,35 @@ export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) 
           placeholder="e.g. Sold 100kg Wheat"
           className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none"
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Quantity (kg) <span className="text-gray-400 font-normal text-xs">(Optional)</span></label>
+          <input 
+            type="number" 
+            min="0"
+            step="0.01"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="e.g. 50"
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Quality Grade <span className="text-gray-400 font-normal text-xs">(Optional)</span></label>
+          <select 
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none bg-white appearance-none"
+          >
+            <option value="">None</option>
+            <option value="Grade 1">Grade 1</option>
+            <option value="Grade 2">Grade 2</option>
+            <option value="Grade 3">Grade 3</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

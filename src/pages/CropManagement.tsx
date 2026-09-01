@@ -36,7 +36,7 @@ export default function CropManagement() {
     setIsAddTxModalOpen(true);
   };
 
-  const handleAddTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string }) => {
+  const handleAddTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; }) => {
     if (!user || !crop) return;
     await addTransaction(user.uid, {
       ...data,
@@ -205,6 +205,7 @@ export default function CropManagement() {
                 <th className="px-6 py-4 font-medium">Date</th>
                 <th className="px-6 py-4 font-medium">Type</th>
                 <th className="px-6 py-4 font-medium">Description</th>
+                <th className="px-6 py-4 font-medium">Details</th>
                 <th className="px-6 py-4 font-medium">Category</th>
                 <th className="px-6 py-4 font-medium text-right">Amount</th>
                 <th className="px-6 py-4 font-medium text-center">Actions</th>
@@ -230,6 +231,10 @@ export default function CropManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-900 font-medium">{tx.description}</td>
+                    <td className="px-6 py-4 text-gray-500 text-xs">
+                      {tx.quantity ? <span className="block font-medium">{tx.quantity} kg</span> : null}
+                      {tx.grade ? <span className="block text-farm-green-600">{tx.grade}</span> : null}
+                    </td>
                     <td className="px-6 py-4 text-gray-500">{tx.category}</td>
                     <td className={cn(
                       "px-6 py-4 whitespace-nowrap text-right font-bold",
@@ -261,6 +266,12 @@ export default function CropManagement() {
                     <div>
                       <h4 className="font-medium text-gray-900">{tx.description}</h4>
                       <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString()} • {tx.category}</p>
+                      {(tx.quantity || tx.grade) && (
+                        <p className="text-xs mt-1">
+                          {tx.quantity ? <span className="text-gray-600 font-medium mr-2">{tx.quantity} kg</span> : null}
+                          {tx.grade ? <span className="text-farm-green-600">{tx.grade}</span> : null}
+                        </p>
+                      )}
                     </div>
                     <span className={cn(
                       "font-bold",
