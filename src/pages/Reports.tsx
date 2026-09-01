@@ -4,6 +4,9 @@ import type { Crop } from '../types';
 import { getCrops } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/Layout';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 export default function Reports() {
   const { user } = useAuth();
@@ -31,6 +34,72 @@ export default function Reports() {
   const totalExpenses = crops.reduce((acc, crop) => acc + crop.totalExpenses, 0);
   const totalProfit = totalIncome - totalExpenses;
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.text('Farm Financial Report', 14, 15);
+    
+    // Add Summary
+    doc.setFontSize(11);
+    doc.text(`Total Income: ${formatCurrency(totalIncome)}`, 14, 25);
+    doc.text(`Total Expenses: ${formatCurrency(totalExpenses)}`, 14, 32);
+    doc.text(`Net Profit: ${formatCurrency(totalProfit)}`, 14, 39);
+
+    const tableColumn = ["Crop", "Income", "Expense", "Profit", "Margin"];
+    const tableRows = crops.map(crop => {
+      const profit = (crop.totalIncome || 0) - (crop.totalExpenses || 0);
+      const margin = crop.totalIncome ? ((profit / crop.totalIncome) * 100).toFixed(1) + '%' : '0%';
+      return [
+        crop.name,
+        formatCurrency(crop.totalIncome || 0),
+        formatCurrency(crop.totalExpenses || 0),
+        formatCurrency(profit),
+        margin
+      ];
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+    });
+
+    doc.save('farm_financial_report.pdf');
+  };
+
+  const handleExportExcel = () => {
+    const summaryData = [
+      ["Summary", ""],
+      ["Total Income", totalIncome],
+      ["Total Expenses", totalExpenses],
+      ["Net Profit", totalProfit],
+      [],
+    ];
+
+    const cropData = crops.map(crop => {
+      const profit = (crop.totalIncome || 0) - (crop.totalExpenses || 0);
+      const margin = crop.totalIncome ? ((profit / crop.totalIncome) * 100).toFixed(1) + '%' : '0%';
+      return {
+        "Crop": crop.name,
+        "Income": crop.totalIncome || 0,
+        "Expense": crop.totalExpenses || 0,
+        "Profit": profit,
+        "Margin": margin
+      };
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.sheet_add_json(ws, cropData, { origin: -1 });
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Financial Report");
+    
+    XLSX.writeFile(wb, "farm_financial_report.xlsx");
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -40,13 +109,13 @@ export default function Reports() {
         </div>
         
         <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
-          <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100 transition w-full sm:w-auto">
+          <button onClick={handleExportPDF} className="flex items-center justify-center px-4 py-3 sm:py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 hover:bg-red-100 transition w-full sm:w-auto print:hidden">
             <FileText className="w-5 h-5 sm:w-4 sm:h-4 mr-2" /> PDF Report
           </button>
-          <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-green-50 text-green-700 rounded-lg border border-green-100 hover:bg-green-100 transition w-full sm:w-auto">
+          <button onClick={handleExportExcel} className="flex items-center justify-center px-4 py-3 sm:py-2 bg-green-50 text-green-700 rounded-lg border border-green-100 hover:bg-green-100 transition w-full sm:w-auto print:hidden">
             <FileSpreadsheet className="w-5 h-5 sm:w-4 sm:h-4 mr-2" /> Export Excel
           </button>
-          <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 transition w-full sm:w-auto">
+          <button onClick={handlePrint} className="flex items-center justify-center px-4 py-3 sm:py-2 bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 transition w-full sm:w-auto print:hidden">
             <Printer className="w-5 h-5 sm:w-4 sm:h-4 mr-2" /> Print
           </button>
         </div>

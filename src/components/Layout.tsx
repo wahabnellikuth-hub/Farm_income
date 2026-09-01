@@ -32,7 +32,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row pb-16 lg:pb-0">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:flex-shrink-0 lg:w-72 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white lg:fixed lg:inset-y-0 lg:left-0 z-50">
+      <div className="hidden lg:flex lg:flex-shrink-0 lg:w-72 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white lg:fixed lg:inset-y-0 lg:left-0 z-50 print:hidden">
         <div className="flex h-16 shrink-0 items-center justify-between px-6 bg-farm-green-700 text-white">
           <div className="flex items-center gap-2 font-bold text-lg">
             <Sprout className="h-6 w-6 text-farm-green-300" />
@@ -81,7 +81,7 @@ export default function Layout() {
       {/* Main content area */}
       <div className="flex flex-1 flex-col w-full lg:ml-72 min-h-screen">
         {/* Mobile Topbar */}
-        <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center bg-farm-green-700 px-4 shadow-sm lg:hidden">
+        <div className="sticky top-0 z-30 flex h-14 shrink-0 items-center bg-farm-green-700 px-4 shadow-sm lg:hidden print:hidden">
           <div className="flex items-center gap-2 font-bold text-lg text-white w-full justify-center relative">
             <Sprout className="h-5 w-5 text-farm-green-300 absolute left-0" />
             <span>Farm Journal</span>
@@ -94,7 +94,7 @@ export default function Layout() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 pb-safe pt-1 lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 pb-safe pt-1 lg:hidden print:hidden">
         <nav className="flex justify-around items-center h-16">
           {navigation.map((item) => (
             <NavLink
