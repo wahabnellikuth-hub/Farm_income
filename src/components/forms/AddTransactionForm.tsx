@@ -4,7 +4,7 @@ import type { TransactionType } from '../../types';
 
 interface AddTransactionFormProps {
   type: TransactionType;
-  onSubmit: (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; }) => Promise<void>;
+  onSubmit: (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; rate?: number; }) => Promise<void>;
 }
 
 export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) {
@@ -12,6 +12,7 @@ export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) 
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [rate, setRate] = useState('');
   const [grade, setGrade] = useState('');
   const [category, setCategory] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
@@ -34,7 +35,8 @@ export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) 
         category,
         paymentMethod,
         quantity: quantity ? Number(quantity) : undefined,
-        grade: grade || undefined
+        grade: grade || undefined,
+        rate: rate ? Number(rate) : undefined
       });
     } finally {
       setLoading(false);
@@ -54,20 +56,38 @@ export function AddTransactionForm({ type, onSubmit }: AddTransactionFormProps) 
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₹</span>
-          <input 
-            type="number" 
-            required
-            min="0"
-            step="1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0"
-            className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none"
-          />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₹</span>
+            <input 
+              type="number" 
+              required
+              min="0"
+              step="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+              className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price <span className="text-gray-400 font-normal text-xs">(Optional)</span></label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">₹</span>
+            <input 
+              type="number" 
+              min="0"
+              step="0.01"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              placeholder="0.00"
+              className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 focus:outline-none"
+            />
+          </div>
         </div>
       </div>
 

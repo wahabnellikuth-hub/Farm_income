@@ -36,7 +36,7 @@ export default function CropManagement() {
     setIsAddTxModalOpen(true);
   };
 
-  const handleAddTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; }) => {
+  const handleAddTransaction = async (data: { date: string; amount: number; description: string; category: string; paymentMethod: string; quantity?: number; grade?: string; rate?: number; }) => {
     if (!user || !crop) return;
     await addTransaction(user.uid, {
       ...data,
