@@ -44,7 +44,6 @@ export default function CropManagement() {
     if (txToEdit) {
       await updateTransaction(txToEdit.id, txToEdit, {
         ...data,
-        cropId: crop.id,
         type: txToEdit.type
       });
       setTxToEdit(null);
