@@ -9,14 +9,14 @@ interface AddTransactionFormProps {
 }
 
 export function AddTransactionForm({ type, initialData, onSubmit }: AddTransactionFormProps) {
-  const [date, setDate] = useState(initialData ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0]);
-  const [amount, setAmount] = useState(initialData ? initialData.amount.toString() : '');
-  const [description, setDescription] = useState(initialData ? initialData.description : '');
+  const [date, setDate] = useState(initialData?.date ? initialData.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+  const [amount, setAmount] = useState(initialData?.amount ? initialData.amount.toString() : '');
+  const [description, setDescription] = useState(initialData?.description || '');
   const [quantity, setQuantity] = useState(initialData?.quantity ? initialData.quantity.toString() : '');
   const [rate, setRate] = useState(initialData?.rate ? initialData.rate.toString() : '');
   const [grade, setGrade] = useState(initialData?.grade || '');
-  const [category, setCategory] = useState(initialData ? initialData.category : '');
-  const [paymentMethod, setPaymentMethod] = useState(initialData ? initialData.paymentMethod : 'Cash');
+  const [category, setCategory] = useState(initialData?.category || '');
+  const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Cash');
   const [loading, setLoading] = useState(false);
 
   const categories = type === 'Income' 

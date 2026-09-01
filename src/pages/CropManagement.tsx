@@ -389,7 +389,7 @@ export default function CropManagement() {
         title="Delete Transaction"
       >
         <div className="space-y-4">
-          <p className="text-gray-600">Are you sure you want to delete this {txToDelete?.type.toLowerCase()} of {txToDelete ? formatCurrency(txToDelete.amount) : ''}? This action cannot be undone.</p>
+          <p className="text-gray-600">Are you sure you want to delete this {txToDelete?.type?.toLowerCase() || 'transaction'} of {txToDelete ? formatCurrency(txToDelete.amount) : ''}? This action cannot be undone.</p>
           <div className="flex gap-3 justify-end pt-2">
             <button onClick={() => setTxToDelete(null)} className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition">Cancel</button>
             <button onClick={() => txToDelete && handleDeleteTransaction(txToDelete)} className="px-4 py-2 bg-red-600 text-white font-medium hover:bg-red-700 rounded-lg transition flex items-center">
