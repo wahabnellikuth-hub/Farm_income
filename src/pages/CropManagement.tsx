@@ -120,12 +120,12 @@ export default function CropManagement() {
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
+        <Link to="/reports" className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
           <FileText className="w-5 h-5 sm:w-4 sm:h-4 mr-2 text-blue-600" /> Generate Report
-        </button>
-        <button className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
+        </Link>
+        <Link to="/analytics" className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
           <BarChart2 className="w-5 h-5 sm:w-4 sm:h-4 mr-2 text-purple-600" /> View Statistics
-        </button>
+        </Link>
       </div>
 
       {/* Target Card */}
