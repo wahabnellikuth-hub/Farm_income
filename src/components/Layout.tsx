@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Sprout, FileBarChart, PieChart, CalendarDays, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Sprout, FileBarChart, PieChart, Settings, LogOut } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -12,7 +12,6 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Financial Report', href: '/reports', icon: FileBarChart },
   { name: 'Analytics', href: '/analytics', icon: PieChart },
-  { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

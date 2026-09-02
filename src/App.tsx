@@ -5,7 +5,6 @@ import Dashboard from './pages/Dashboard';
 import CropManagement from './pages/CropManagement';
 import Reports from './pages/Reports';
 import Analytics from './pages/Analytics';
-import CalendarView from './pages/CalendarView';
 import Settings from './pages/Settings';
 
 
@@ -20,7 +19,6 @@ function App() {
             <Route path="crop/:id" element={<CropManagement />} />
             <Route path="reports" element={<Reports />} />
             <Route path="analytics" element={<Analytics />} />
-            <Route path="calendar" element={<CalendarView />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           {/* Catch all redirect to home */}
