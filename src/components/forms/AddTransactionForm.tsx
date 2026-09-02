@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Transaction, TransactionType } from '../../types';
 
@@ -23,6 +23,15 @@ export function AddTransactionForm({ type, initialData, onSubmit }: AddTransacti
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Cash');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Auto-calculate amount if quantity and rate are provided
+  useEffect(() => {
+    if (quantity && rate) {
+      const calculatedAmount = (Number(quantity) * Number(rate)).toFixed(2);
+      // Remove trailing .00 if it's a whole number
+      setAmount(calculatedAmount.endsWith('.00') ? calculatedAmount.slice(0, -3) : calculatedAmount);
+    }
+  }, [quantity, rate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

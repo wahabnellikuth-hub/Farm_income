@@ -43,8 +43,17 @@ export default function Reports() {
     return <div className="p-8 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 animate-spin text-farm-green-600" /></div>;
   }
 
-  const totalIncome = crops.reduce((acc, crop) => acc + crop.totalIncome, 0);
-  const totalExpenses = crops.reduce((acc, crop) => acc + crop.totalExpenses, 0);
+  // Calculate real totals dynamically from transactions to ensure 100% accuracy
+  const cropTotals = crops.reduce((acc, crop) => {
+    const cropTxs = transactions.filter(t => t.cropId === crop.id);
+    const income = cropTxs.filter(t => t.type === 'Income').reduce((sum, t) => sum + t.amount, 0);
+    const expense = cropTxs.filter(t => t.type === 'Expense').reduce((sum, t) => sum + t.amount, 0);
+    acc[crop.id] = { income, expense };
+    return acc;
+  }, {} as Record<string, { income: number, expense: number }>);
+
+  const totalIncome = Object.values(cropTotals).reduce((sum, curr) => sum + curr.income, 0);
+  const totalExpenses = Object.values(cropTotals).reduce((sum, curr) => sum + curr.expense, 0);
   const totalProfit = totalIncome - totalExpenses;
 
   const handleExportPDF = () => {
@@ -59,12 +68,13 @@ export default function Reports() {
 
     const tableColumn = ["Crop", "Income", "Expense", "Profit", "Margin"];
     const tableRows = crops.map(crop => {
-      const profit = (crop.totalIncome || 0) - (crop.totalExpenses || 0);
-      const margin = crop.totalIncome ? ((profit / crop.totalIncome) * 100).toFixed(1) + '%' : '0%';
+      const totals = cropTotals[crop.id] || { income: 0, expense: 0 };
+      const profit = totals.income - totals.expense;
+      const margin = totals.income ? ((profit / totals.income) * 100).toFixed(1) + '%' : '0%';
       return [
         crop.name,
-        formatCurrency(crop.totalIncome || 0),
-        formatCurrency(crop.totalExpenses || 0),
+        formatCurrency(totals.income),
+        formatCurrency(totals.expense),
         formatCurrency(profit),
         margin
       ];
@@ -89,12 +99,13 @@ export default function Reports() {
     ];
 
     const cropData = crops.map(crop => {
-      const profit = (crop.totalIncome || 0) - (crop.totalExpenses || 0);
-      const margin = crop.totalIncome ? ((profit / crop.totalIncome) * 100).toFixed(1) + '%' : '0%';
+      const totals = cropTotals[crop.id] || { income: 0, expense: 0 };
+      const profit = totals.income - totals.expense;
+      const margin = totals.income ? ((profit / totals.income) * 100).toFixed(1) + '%' : '0%';
       return {
         "Crop": crop.name,
-        "Income": crop.totalIncome || 0,
-        "Expense": crop.totalExpenses || 0,
+        "Income": totals.income,
+        "Expense": totals.expense,
         "Profit": profit,
         "Margin": margin
       };
@@ -128,6 +139,21 @@ export default function Reports() {
     });
 
     if (masterLedgerSheetData.length > 0) {
+      // Add a totals row
+      masterLedgerSheetData.push({
+        "Date": "TOTALS",
+        "Crop": "",
+        "Type": "",
+        "Category": "",
+        "Description": "",
+        "Quantity (kg)": "",
+        "Grade": "",
+        "Rate (₹)": "",
+        "Income (₹)": totalIncome,
+        "Expense (₹)": totalExpenses,
+        "Balance (₹)": masterBalance,
+        "Payment Method": ""
+      });
       const wsMasterLedger = XLSX.utils.json_to_sheet(masterLedgerSheetData);
       XLSX.utils.book_append_sheet(wb, wsMasterLedger, "Master Ledger");
     }
@@ -154,6 +180,22 @@ export default function Reports() {
             "Payment Method": tx.paymentMethod
           };
         });
+        // Add a totals row for the crop
+        const totals = cropTotals[crop.id] || { income: 0, expense: 0 };
+        cropSheetData.push({
+          "Date": "TOTALS",
+          "Type": "",
+          "Category": "",
+          "Description": "",
+          "Quantity (kg)": "",
+          "Grade": "",
+          "Rate (₹)": "",
+          "Income (₹)": totals.income,
+          "Expense (₹)": totals.expense,
+          "Balance (₹)": balance,
+          "Payment Method": ""
+        });
+        
         const wsCrop = XLSX.utils.json_to_sheet(cropSheetData);
         let sheetName = crop.name.substring(0, 31).replace(/[\\/*?:\[\]]/g, '');
         
@@ -235,16 +277,17 @@ export default function Reports() {
                 </tr>
               ) : (
                 crops.map((crop) => {
-                  const profit = (crop.totalIncome || 0) - (crop.totalExpenses || 0);
-                  const margin = crop.totalIncome ? (profit / crop.totalIncome) * 100 : 0;
+                  const totals = cropTotals[crop.id] || { income: 0, expense: 0 };
+                  const profit = totals.income - totals.expense;
+                  const margin = totals.income ? (profit / totals.income) * 100 : 0;
                   
                   return (
                     <tr key={crop.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center gap-2">
                         <span>{crop.icon}</span> {crop.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-green-600">{formatCurrency(crop.totalIncome || 0)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-red-600">{formatCurrency(crop.totalExpenses || 0)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-green-600">{formatCurrency(totals.income)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-red-600">{formatCurrency(totals.expense)}</td>
                       <td className={cn(
                         "px-6 py-4 whitespace-nowrap text-right font-bold",
                         profit >= 0 ? "text-green-600" : "text-red-600"
