@@ -183,7 +183,7 @@ export default function CropManagement() {
       "Expense (₹)": totalExpense,
       "Balance (₹)": balance,
       "Payment Method": ""
-    });
+    } as any);
 
     const ws = XLSX.utils.json_to_sheet(sheetData);
     const wb = XLSX.utils.book_new();

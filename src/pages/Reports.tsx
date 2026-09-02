@@ -153,7 +153,7 @@ export default function Reports() {
         "Expense (₹)": totalExpenses,
         "Balance (₹)": masterBalance,
         "Payment Method": ""
-      });
+      } as any);
       const wsMasterLedger = XLSX.utils.json_to_sheet(masterLedgerSheetData);
       XLSX.utils.book_append_sheet(wb, wsMasterLedger, "Master Ledger");
     }
@@ -194,7 +194,7 @@ export default function Reports() {
           "Expense (₹)": totals.expense,
           "Balance (₹)": balance,
           "Payment Method": ""
-        });
+        } as any);
         
         const wsCrop = XLSX.utils.json_to_sheet(cropSheetData);
         let sheetName = crop.name.substring(0, 31).replace(/[\\/*?:\[\]]/g, '');
