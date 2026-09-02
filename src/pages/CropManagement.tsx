@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { useParams, Link } from 'react-router-dom';
 import type { Crop, Transaction, TransactionType } from '../types';
 import { getCrops, getTransactions, addTransaction, deleteTransaction, updateCropTarget, updateTransaction } from '../lib/db';
@@ -9,6 +10,7 @@ import {
   PlusCircle, 
   MinusCircle, 
   FileText, 
+  FileSpreadsheet,
   BarChart2, 
   Target,
   ArrowLeft,
@@ -139,6 +141,58 @@ export default function CropManagement() {
     return true;
   });
 
+  const handleExportExcel = () => {
+    if (!crop || transactions.length === 0) return;
+    
+    let balance = 0;
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    const cropTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const sheetData = cropTxs.map(tx => {
+      const isIncome = tx.type === 'Income';
+      balance += isIncome ? tx.amount : -tx.amount;
+      if (isIncome) totalIncome += tx.amount;
+      else totalExpense += tx.amount;
+      
+      return {
+        "Date": tx.date.split('T')[0],
+        "Type": tx.type,
+        "Category": tx.category,
+        "Description": tx.description,
+        "Quantity (kg)": tx.quantity || '-',
+        "Grade": tx.grade || '-',
+        "Rate (₹)": tx.rate || '-',
+        "Income (₹)": isIncome ? tx.amount : 0,
+        "Expense (₹)": !isIncome ? tx.amount : 0,
+        "Balance (₹)": balance,
+        "Payment Method": tx.paymentMethod
+      };
+    });
+
+    sheetData.push({
+      "Date": "TOTALS",
+      "Type": "",
+      "Category": "",
+      "Description": "",
+      "Quantity (kg)": "",
+      "Grade": "",
+      "Rate (₹)": "",
+      "Income (₹)": totalIncome,
+      "Expense (₹)": totalExpense,
+      "Balance (₹)": balance,
+      "Payment Method": ""
+    });
+
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    const sheetName = crop.name.substring(0, 31).replace(/[\\/*?:\[\]]/g, '');
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    
+    XLSX.writeFile(wb, `${crop.name}_Transactions.xlsx`);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-24 lg:pb-8">
       {/* Header */}
@@ -169,6 +223,9 @@ export default function CropManagement() {
         <Link to={`/reports?cropId=${crop.id}`} className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
           <FileText className="w-5 h-5 sm:w-4 sm:h-4 mr-2 text-blue-600" /> Generate Report
         </Link>
+        <button onClick={handleExportExcel} className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
+          <FileSpreadsheet className="w-5 h-5 sm:w-4 sm:h-4 mr-2 text-green-600" /> Export Excel
+        </button>
         <Link to={`/analytics?cropId=${crop.id}`} className="flex items-center justify-center px-4 py-3 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition">
           <BarChart2 className="w-5 h-5 sm:w-4 sm:h-4 mr-2 text-purple-600" /> View Statistics
         </Link>
