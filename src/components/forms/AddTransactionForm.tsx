@@ -34,16 +34,20 @@ export function AddTransactionForm({ type, initialData, onSubmit }: AddTransacti
     try {
       setLoading(true);
       setError('');
-      await onSubmit({
+      
+      const payload: any = {
         date,
         amount: Number(amount),
         description,
         category,
         paymentMethod,
-        quantity: quantity ? Number(quantity) : undefined,
-        grade: grade || undefined,
-        rate: rate ? Number(rate) : undefined
-      });
+      };
+      
+      if (quantity) payload.quantity = Number(quantity);
+      if (grade) payload.grade = grade;
+      if (rate) payload.rate = Number(rate);
+
+      await onSubmit(payload);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Failed to save transaction. Please check permissions or network.');
