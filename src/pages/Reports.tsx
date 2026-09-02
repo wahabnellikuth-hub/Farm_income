@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, FileSpreadsheet, Printer, Loader2 } from 'lucide-react';
-import type { Crop } from '../types';
-import { getCrops } from '../lib/db';
+import type { Crop, Transaction } from '../types';
+import { getCrops, getTransactions } from '../lib/db';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/Layout';
 import jsPDF from 'jspdf';
@@ -14,15 +14,21 @@ export default function Reports() {
   const [searchParams] = useSearchParams();
   const cropId = searchParams.get('cropId');
   const [crops, setCrops] = useState<Crop[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      getCrops(user.uid).then((c) => {
+      Promise.all([
+        getCrops(user.uid),
+        getTransactions(user.uid)
+      ]).then(([c, t]) => {
         if (cropId) {
           setCrops(c.filter(crop => crop.id === cropId));
+          setTransactions(t.filter(tx => tx.cropId === cropId));
         } else {
           setCrops(c);
+          setTransactions(t);
         }
         setLoading(false);
       });
@@ -94,12 +100,74 @@ export default function Reports() {
       };
     });
 
-    const ws = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.sheet_add_json(ws, cropData, { origin: -1 });
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.sheet_add_json(wsSummary, cropData, { origin: -1 });
     
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Financial Report");
-    
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // Master Ledger
+    const masterLedgerData = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    let masterBalance = 0;
+    const masterLedgerSheetData = masterLedgerData.map(tx => {
+      masterBalance += tx.type === 'Income' ? tx.amount : -tx.amount;
+      return {
+        "Date": tx.date.split('T')[0],
+        "Crop": crops.find(c => c.id === tx.cropId)?.name || 'Unknown',
+        "Type": tx.type,
+        "Category": tx.category,
+        "Description": tx.description,
+        "Quantity (kg)": tx.quantity || '-',
+        "Grade": tx.grade || '-',
+        "Rate (₹)": tx.rate || '-',
+        "Income (₹)": tx.type === 'Income' ? tx.amount : 0,
+        "Expense (₹)": tx.type === 'Expense' ? tx.amount : 0,
+        "Balance (₹)": masterBalance,
+        "Payment Method": tx.paymentMethod
+      };
+    });
+
+    if (masterLedgerSheetData.length > 0) {
+      const wsMasterLedger = XLSX.utils.json_to_sheet(masterLedgerSheetData);
+      XLSX.utils.book_append_sheet(wb, wsMasterLedger, "Master Ledger");
+    }
+
+    // Individual Crop Sheets
+    crops.forEach(crop => {
+      const cropTxs = transactions.filter(t => t.cropId === crop.id).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      if (cropTxs.length > 0) {
+        let balance = 0;
+        const cropSheetData = cropTxs.map(tx => {
+          balance += tx.type === 'Income' ? tx.amount : -tx.amount;
+          return {
+            "Date": tx.date.split('T')[0],
+            "Type": tx.type,
+            "Category": tx.category,
+            "Description": tx.description,
+            "Quantity (kg)": tx.quantity || '-',
+            "Grade": tx.grade || '-',
+            "Rate (₹)": tx.rate || '-',
+            "Income (₹)": tx.type === 'Income' ? tx.amount : 0,
+            "Expense (₹)": tx.type === 'Expense' ? tx.amount : 0,
+            "Balance (₹)": balance,
+            "Payment Method": tx.paymentMethod
+          };
+        });
+        const wsCrop = XLSX.utils.json_to_sheet(cropSheetData);
+        let sheetName = crop.name.substring(0, 31).replace(/[\\/*?:\[\]]/g, '');
+        
+        let finalSheetName = sheetName;
+        let counter = 1;
+        while (wb.SheetNames.includes(finalSheetName)) {
+          finalSheetName = `${sheetName.substring(0, 28)}_${counter}`;
+          counter++;
+        }
+        
+        XLSX.utils.book_append_sheet(wb, wsCrop, finalSheetName);
+      }
+    });
+
     XLSX.writeFile(wb, "farm_financial_report.xlsx");
   };
 
