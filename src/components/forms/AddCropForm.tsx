@@ -12,6 +12,7 @@ export function AddCropForm({ onSubmit }: AddCropFormProps) {
   const [targetIncome, setTargetIncome] = useState('');
   const [icon, setIcon] = useState(COMMON_ICONS[0]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,11 +20,15 @@ export function AddCropForm({ onSubmit }: AddCropFormProps) {
     
     try {
       setLoading(true);
+      setError('');
       await onSubmit({
         name,
         targetIncome: Number(targetIncome),
         icon
       });
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to save crop. Please check permissions or network.');
     } finally {
       setLoading(false);
     }
@@ -31,6 +36,11 @@ export function AddCropForm({ onSubmit }: AddCropFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Crop Name</label>
         <input 

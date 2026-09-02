@@ -22,13 +22,18 @@ export function AddTransactionForm({ type, initialData, onSubmit }: AddTransacti
   const [category, setCategory] = useState(initialData?.category || categories[0]);
   const [paymentMethod, setPaymentMethod] = useState(initialData?.paymentMethod || 'Cash');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !description || !category) return;
+    if (!amount || !description || !category) {
+      setError('Please fill out all required fields: Amount, Item, and Category.');
+      return;
+    }
     
     try {
       setLoading(true);
+      setError('');
       await onSubmit({
         date,
         amount: Number(amount),
@@ -39,6 +44,9 @@ export function AddTransactionForm({ type, initialData, onSubmit }: AddTransacti
         grade: grade || undefined,
         rate: rate ? Number(rate) : undefined
       });
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to save transaction. Please check permissions or network.');
     } finally {
       setLoading(false);
     }
@@ -46,6 +54,11 @@ export function AddTransactionForm({ type, initialData, onSubmit }: AddTransacti
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
         <input 
