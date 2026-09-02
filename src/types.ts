@@ -23,5 +23,7 @@ export interface Crop {
   targetIncome: number;
   totalIncome: number;
   totalExpenses: number;
+  description?: string;
+  pdfUrl?: string;
   lastUpdated: string;
 }

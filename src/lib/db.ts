@@ -29,6 +29,11 @@ export async function updateCropTarget(cropId: string, targetIncome: number) {
   await update(cropRef, { targetIncome });
 }
 
+export async function updateCropDetails(cropId: string, details: { description?: string, pdfUrl?: string }) {
+  const cropRef = ref(db, `${CROPS_COLLECTION}/${cropId}`);
+  await update(cropRef, details);
+}
+
 // Transactions
 export async function getTransactions(userId: string): Promise<Transaction[]> {
   const dbRef = ref(db);

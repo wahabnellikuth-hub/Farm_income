@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useParams, Link } from 'react-router-dom';
 import type { Crop, Transaction, TransactionType } from '../types';
-import { getCrops, getTransactions, addTransaction, deleteTransaction, updateCropTarget, updateTransaction } from '../lib/db';
+import { getCrops, getTransactions, addTransaction, deleteTransaction, updateCropTarget, updateTransaction, updateCropDetails } from '../lib/db';
+import { storage } from '../lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { AddTransactionForm } from '../components/forms/AddTransactionForm';
@@ -35,6 +37,11 @@ export default function CropManagement() {
 
   const [txToEdit, setTxToEdit] = useState<Transaction | null>(null);
 
+  const [isEditDetailsModalOpen, setIsEditDetailsModalOpen] = useState(false);
+  const [editDescription, setEditDescription] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
   const openTxModal = (type: TransactionType) => {
     setTxModalType(type);
     setIsAddTxModalOpen(true);
@@ -66,6 +73,7 @@ export default function CropManagement() {
     const foundCrop = allCrops.find(c => c.id === id);
     setCrop(foundCrop || null);
     setTransactions(allTransactions.filter(t => t.cropId === id));
+    fetchData();
   };
 
   const [txToDelete, setTxToDelete] = useState<Transaction | null>(null);
@@ -73,18 +81,42 @@ export default function CropManagement() {
   const handleDeleteTransaction = async (tx: Transaction) => {
     if (!user || !crop) return;
     setLoading(true);
-    await deleteTransaction(tx);
+    try {
+      await deleteTransaction(tx);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to delete transaction", error);
+    }
+  };
+
+  const handleSaveDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!crop) return;
     
-    // Refresh data
-    const [allCrops, allTransactions] = await Promise.all([
-      getCrops(user.uid),
-      getTransactions(user.uid)
-    ]);
-    const foundCrop = allCrops.find(c => c.id === id);
-    setCrop(foundCrop || null);
-    setTransactions(allTransactions.filter(t => t.cropId === id));
-    setTxToDelete(null);
-    setLoading(false);
+    setIsUploadingPdf(true);
+    let newPdfUrl = crop.pdfUrl;
+
+    try {
+      if (pdfFile) {
+        const fileRef = storageRef(storage, `crops/${crop.id}/${pdfFile.name}`);
+        await uploadBytes(fileRef, pdfFile);
+        newPdfUrl = await getDownloadURL(fileRef);
+      }
+
+      await updateCropDetails(crop.id, {
+        description: editDescription,
+        pdfUrl: newPdfUrl
+      });
+      
+      setIsEditDetailsModalOpen(false);
+      setPdfFile(null);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to update crop details", error);
+      alert("Failed to save details. Please check your network or permissions.");
+    } finally {
+      setIsUploadingPdf(false);
+    }
   };
 
   const [isEditTargetModalOpen, setIsEditTargetModalOpen] = useState(false);
@@ -96,17 +128,13 @@ export default function CropManagement() {
     setLoading(true);
     await updateCropTarget(crop.id, Number(newTarget));
     setIsEditTargetModalOpen(false);
-    
-    const allCrops = await getCrops(user.uid);
-    const foundCrop = allCrops.find(c => c.id === id);
-    setCrop(foundCrop || null);
-    setLoading(false);
+    fetchData();
   };
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (user && id) {
       Promise.all([
         getCrops(user.uid),
@@ -118,6 +146,10 @@ export default function CropManagement() {
         setLoading(false);
       });
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [user, id]);
 
   if (loading) {
@@ -131,9 +163,6 @@ export default function CropManagement() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   };
-
-  const remaining = crop.targetIncome - crop.totalIncome;
-  const progress = Math.min((crop.totalIncome / crop.targetIncome) * 100, 100);
 
   const filteredTransactions = transactions.filter(t => {
     if (filterType !== 'All' && t.type !== filterType) return false;
@@ -248,21 +277,54 @@ export default function CropManagement() {
         </div>
 
         <div className="space-y-3">
-          <div className="flex justify-between text-sm sm:text-base">
-            <span>Current: <strong className="font-semibold">{formatCurrency(crop.totalIncome)}</strong></span>
-            <span>Remaining: <strong className="font-semibold">{remaining > 0 ? formatCurrency(remaining) : 'Goal Reached!'}</strong></span>
+          <div className="flex justify-between items-center text-sm font-medium">
+            <span>Current: {formatCurrency(crop.totalIncome)}</span>
+            <span className="opacity-80">Remaining: {formatCurrency(Math.max(0, crop.targetIncome - crop.totalIncome))}</span>
           </div>
-          <div className="w-full bg-black/20 rounded-full h-3 backdrop-blur-sm p-0.5">
+          <div className="h-3 bg-black/20 rounded-full overflow-hidden backdrop-blur-sm">
             <div 
-              className="bg-white h-2 rounded-full transition-all duration-1000 ease-out" 
-              style={{ width: `${progress}%` }}
-            />
+              className="h-full bg-white transition-all duration-1000 ease-out relative"
+              style={{ width: `${Math.min(100, (crop.totalIncome / crop.targetIncome) * 100)}%` }}
+            >
+              <div className="absolute inset-0 bg-white/50 animate-[shimmer_2s_infinite]"></div>
+            </div>
           </div>
-          <p className="text-center font-medium italic opacity-90">
-            {progress >= 100 
-              ? "🎉 Excellent! You've reached your goal." 
-              : `🌱 You are ${progress.toFixed(1)}% towards your target. Keep going!`}
+          <p className="text-sm text-center font-medium mt-2 opacity-90 italic">
+            🌱 You are {((crop.totalIncome / crop.targetIncome) * 100).toFixed(1)}% towards your target. Keep going!
           </p>
+        </div>
+      </div>
+
+      {/* Crop Details Card */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <div className="flex justify-between items-start mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Crop Details</h2>
+          <button 
+            onClick={() => {
+              setEditDescription(crop.description || '');
+              setPdfFile(null);
+              setIsEditDetailsModalOpen(true);
+            }} 
+            className="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition"
+          >
+            Edit Details
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-1">Description</h3>
+            <p className="text-gray-700 whitespace-pre-wrap">{crop.description || 'No description provided.'}</p>
+          </div>
+          
+          {crop.pdfUrl && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Attached Document</h3>
+              <a href={crop.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 hover:bg-blue-100 transition">
+                <FileText className="w-4 h-4 mr-2" /> View PDF Document
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
@@ -479,6 +541,55 @@ export default function CropManagement() {
           <button type="submit" className="w-full py-3 bg-farm-green-600 text-white rounded-lg font-medium hover:bg-farm-green-700 transition">
             Save Target
           </button>
+        </form>
+      </Modal>
+
+      {/* Edit Details Modal */}
+      <Modal isOpen={isEditDetailsModalOpen} onClose={() => setIsEditDetailsModalOpen(false)} title="Edit Crop Details">
+        <form onSubmit={handleSaveDetails} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-farm-green-500 outline-none transition"
+              placeholder="Enter crop description or notes..."
+              rows={4}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Attach PDF Document (Optional)</label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setPdfFile(e.target.files ? e.target.files[0] : null)}
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-farm-green-50 file:text-farm-green-700 hover:file:bg-farm-green-100 transition"
+            />
+            {crop.pdfUrl && !pdfFile && (
+              <p className="mt-2 text-sm text-gray-500 flex items-center">
+                <FileText className="w-4 h-4 mr-1 text-blue-500" /> Current PDF is saved. Upload a new one to replace it.
+              </p>
+            )}
+          </div>
+          
+          <div className="pt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsEditDetailsModalOpen(false)}
+              className="flex-1 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium"
+              disabled={isUploadingPdf}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isUploadingPdf}
+              className="flex-1 py-2 text-white bg-farm-green-600 hover:bg-farm-green-700 rounded-lg transition-colors font-medium flex items-center justify-center"
+            >
+              {isUploadingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Details'}
+            </button>
+          </div>
         </form>
       </Modal>
     </div>
